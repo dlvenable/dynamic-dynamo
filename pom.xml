@@ -20,19 +20,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <name>dynamic-dynamo</name>
+    <name>Dynamic Dynamo</name>
     <groupId>io.venable.amazonaws</groupId>
     <artifactId>dynamic-dynamo</artifactId>
     <version>0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <description>
-      Provides better abstractions for DynamoDB using the Amazon AWS Java SDK
-    </description>
+    <description>Provides higher-level abstractions for DynamoDB using the Amazon AWS Java SDK</description>
+    <url>https://github.com/dlvenable/dynamic-dynamo</url>
 
     <developers>
         <developer>
             <name>David Venable</name>
+            <email>dev@venable.io</email>
+            <url>https://github.com/dlvenable</url>
         </developer>
     </developers>
 
