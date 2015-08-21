@@ -151,7 +151,7 @@ public class TableBuilder
         return createTableRequest;
     }
 
-    public KeySchemaElement getHashKeySchemaElement(Collection<KeySchemaElement> keySchemaElementCollection)
+    private KeySchemaElement getHashKeySchemaElement(Collection<KeySchemaElement> keySchemaElementCollection)
     {
         for (KeySchemaElement keySchemaElement : keySchemaElementCollection) {
             if(KeyType.HASH.toString().equals(keySchemaElement.getKeyType()))
