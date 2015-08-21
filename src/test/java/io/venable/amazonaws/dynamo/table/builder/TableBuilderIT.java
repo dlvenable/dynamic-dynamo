@@ -290,4 +290,75 @@ public class TableBuilderIT
         assertThat(primaryHashAttributeValue, notNullValue());
         assertThat(primaryHashAttributeValue.getS(), is(hashKeyValue));
     }
+
+    @Test
+    public void create_a_table_with_a_hash_and_range_primary_key_and_local_secondary_index()
+    {
+        String localSecondaryIndexName = UUID.randomUUID().toString();
+        String localSecondaryRangeName = UUID.randomUUID().toString();
+
+        // @formatter:off
+        createObjectUnderTest()
+                .name(tableName)
+                .primary()
+                    .hash()
+                        .name(hashKeyName).type(ScalarAttributeType.S)
+                    .range()
+                        .name(rangeKeyName).type(ScalarAttributeType.S)
+                    .readCapacity(1)
+                    .writeCapacity(1)
+                .and()
+                .local()
+                    .name(localSecondaryIndexName)
+                    .range()
+                        .name(localSecondaryRangeName)
+                        .type(ScalarAttributeType.S)
+                    .projection()
+                        .all()
+                .and()
+                .create(amazonDynamoDB);
+        // @formatter:on
+
+        String rangeValue = UUID.randomUUID().toString();
+
+        item.remove(rangeKeyName);
+        item.put(hashKeyName, new AttributeValue().withS(hashKeyValue));
+        item.put(rangeKeyName, new AttributeValue().withS(rangeKeyValue));
+        item.put(localSecondaryRangeName, new AttributeValue().withS(rangeValue));
+        item.put(nonIndexedName, new AttributeValue().withS(nonIndexedValue));
+        putItem(item);
+
+        Condition hashEqualityCondition = new Condition()
+                .withComparisonOperator(ComparisonOperator.EQ)
+                .withAttributeValueList(new AttributeValue().withS(hashKeyValue));
+        Condition rangeEqualityCondition = new Condition()
+                .withComparisonOperator(ComparisonOperator.EQ)
+                .withAttributeValueList(new AttributeValue().withS(rangeValue));
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put(hashKeyName, hashEqualityCondition);
+        conditionMap.put(localSecondaryRangeName, rangeEqualityCondition);
+        QueryRequest queryRequest = new QueryRequest()
+                .withTableName(tableName)
+                .withIndexName(localSecondaryIndexName)
+                .withKeyConditions(conditionMap);
+
+        QueryResult queryResult = amazonDynamoDB.query(queryRequest);
+        assertThat(queryResult.getCount(), is(1));
+        List<Map<String, AttributeValue>> items = queryResult.getItems();
+        assertThat(items.size(), is(1));
+        Map<String, AttributeValue> singleItem = items.get(0);
+        assertThat(singleItem, notNullValue());
+
+        AttributeValue localHashAttributeValue = singleItem.get(localSecondaryRangeName);
+        assertThat(localHashAttributeValue, notNullValue());
+        assertThat(localHashAttributeValue.getS(), is(rangeValue));
+
+        AttributeValue primaryHashAttributeValue = singleItem.get(hashKeyName);
+        assertThat(primaryHashAttributeValue, notNullValue());
+        assertThat(primaryHashAttributeValue.getS(), is(hashKeyValue));
+
+        AttributeValue nonIndexedHashAttributeValue = singleItem.get(nonIndexedName);
+        assertThat(nonIndexedHashAttributeValue, notNullValue());
+        assertThat(nonIndexedHashAttributeValue.getS(), is(nonIndexedValue));
+    }
 }

@@ -17,6 +17,7 @@
 package io.venable.amazonaws.dynamo.table.builder;
 
 import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
+import com.amazonaws.services.dynamodbv2.model.LocalSecondaryIndex;
 import com.amazonaws.services.dynamodbv2.model.Projection;
 import com.amazonaws.services.dynamodbv2.model.ProjectionType;
 import io.venable.amazonaws.dynamo.table.NoProjectionException;
@@ -66,11 +67,23 @@ class ProjectionBuilderImpl<T> implements ProjectionBuilder<T>
         return parent;
     }
 
-    public void build(GlobalSecondaryIndex globalSecondaryIndex)
+    void build(GlobalSecondaryIndex globalSecondaryIndex)
+    {
+        validateProjection();
+
+        globalSecondaryIndex.setProjection(projection);
+    }
+
+    void build(LocalSecondaryIndex localSecondaryIndex)
+    {
+        validateProjection();
+
+        localSecondaryIndex.setProjection(projection);
+    }
+
+    private void validateProjection()
     {
         if(projection.getProjectionType() == null)
             throw new NoProjectionException();
-
-        globalSecondaryIndex.setProjection(projection);
     }
 }

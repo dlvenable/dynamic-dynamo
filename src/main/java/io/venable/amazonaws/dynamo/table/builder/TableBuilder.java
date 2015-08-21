@@ -29,12 +29,14 @@ public class TableBuilder
 {
     private final PrimaryKeyBuilderImpl primaryKeyBuilder;
     private final Collection<GlobalSecondaryIndexBuilderImpl> globalSecondaryIndexBuilderCollection;
+    private final Collection<LocalSecondaryIndexBuilderImpl> localSecondaryIndexBuilderCollection;
     private String tableName;
 
     public TableBuilder()
     {
         primaryKeyBuilder = new PrimaryKeyBuilderImpl(this);
         globalSecondaryIndexBuilderCollection = new ArrayList<>();
+        localSecondaryIndexBuilderCollection = new ArrayList<>();
     }
 
     public TableBuilder name(String tableName)
@@ -55,6 +57,13 @@ public class TableBuilder
         return globalSecondaryIndexBuilder;
     }
 
+    public LocalSecondaryIndexBuilder local()
+    {
+        LocalSecondaryIndexBuilderImpl localSecondaryIndexBuilder = new LocalSecondaryIndexBuilderImpl(this);
+        localSecondaryIndexBuilderCollection.add(localSecondaryIndexBuilder);
+        return localSecondaryIndexBuilder;
+    }
+
     public CreateTableResult create(AmazonDynamoDB amazonDynamoDB)
     {
         CreateTableRequest createTableRequest = buildCreateTableRequest();
@@ -68,11 +77,18 @@ public class TableBuilder
 
         primaryKeyBuilder.buildPrimaryKey(keySchemaElementCollection, attributeDefinitionCollection);
 
-        Collection<GlobalSecondaryIndex> globalSecondaryIndexCollection = new ArrayList<>();
+        KeySchemaElement primaryHashKeySchemaElement = getHashKeySchemaElement(keySchemaElementCollection);
 
+        Collection<GlobalSecondaryIndex> globalSecondaryIndexCollection = new ArrayList<>();
         for (GlobalSecondaryIndexBuilderImpl globalSecondaryIndexBuilder : globalSecondaryIndexBuilderCollection)
         {
             globalSecondaryIndexBuilder.buildSecondaryIndexes(globalSecondaryIndexCollection, attributeDefinitionCollection);
+        }
+
+        Collection<LocalSecondaryIndex> localSecondaryIndexCollection = new ArrayList<>();
+        for (LocalSecondaryIndexBuilderImpl localSecondaryIndexBuilder : localSecondaryIndexBuilderCollection)
+        {
+            localSecondaryIndexBuilder.buildSecondaryIndexes(primaryHashKeySchemaElement, localSecondaryIndexCollection, attributeDefinitionCollection);
         }
 
         CreateTableRequest createTableRequest = new CreateTableRequest()
@@ -83,8 +99,21 @@ public class TableBuilder
         if(globalSecondaryIndexCollection.size() > 0)
             createTableRequest.setGlobalSecondaryIndexes(globalSecondaryIndexCollection);
 
+        if(localSecondaryIndexCollection.size() > 0)
+            createTableRequest.setLocalSecondaryIndexes(localSecondaryIndexCollection);
+
         primaryKeyBuilder.setProvisionedThroughput(new PrimaryKeyProvisionedThroughputSetter(createTableRequest));
 
         return createTableRequest;
+    }
+
+    public KeySchemaElement getHashKeySchemaElement(Collection<KeySchemaElement> keySchemaElementCollection)
+    {
+        for (KeySchemaElement keySchemaElement : keySchemaElementCollection) {
+            if(KeyType.HASH.toString().equals(keySchemaElement.getKeyType()))
+                return keySchemaElement;
+        }
+
+        throw new IllegalStateException("The hash key was not found, but should have already been created.");
     }
 }
