@@ -23,7 +23,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
+ * A fluent-style builder for DynamoDB tables.
+ *
  * @author David Venable
+ * @since 0.1
  */
 public class TableBuilder
 {
@@ -39,17 +42,41 @@ public class TableBuilder
         localSecondaryIndexBuilderCollection = new ArrayList<>();
     }
 
+    /**
+     * Sets the name of the table.
+     *
+     * @param tableName the table name
+     * @return this {@link TableBuilder}
+     * @since 0.1
+     */
     public TableBuilder name(String tableName)
     {
         this.tableName = tableName;
         return this;
     }
 
+    /**
+     * Provides a {@link PrimaryKeyBuilder} for building
+     * the primary key of this table.
+     *
+     * @return the {@link PrimaryKeyBuilder}
+     * @since 0.1
+     */
     public PrimaryKeyBuilder primary()
     {
         return primaryKeyBuilder;
     }
 
+    /**
+     * Provides a {@link GlobalSecondaryIndexBuilder} to create
+     * a single global secondary index on this table.
+     * <p>
+     * Each global secondary index should have a new call to
+     * this function.
+     *
+     * @return the new {@link GlobalSecondaryIndexBuilder}
+     * @since 0.1
+     */
     public GlobalSecondaryIndexBuilder global()
     {
         GlobalSecondaryIndexBuilderImpl globalSecondaryIndexBuilder = new GlobalSecondaryIndexBuilderImpl(this);
@@ -57,6 +84,16 @@ public class TableBuilder
         return globalSecondaryIndexBuilder;
     }
 
+    /**
+     * Provides a {@link LocalSecondaryIndexBuilder} to create
+     * a single local secondary index on this table.
+     * <p>
+     * Each local secondary index should have a new call to
+     * this function.
+     *
+     * @return the new {@link LocalSecondaryIndexBuilder}
+     * @since 0.2
+     */
     public LocalSecondaryIndexBuilder local()
     {
         LocalSecondaryIndexBuilderImpl localSecondaryIndexBuilder = new LocalSecondaryIndexBuilderImpl(this);
@@ -64,6 +101,13 @@ public class TableBuilder
         return localSecondaryIndexBuilder;
     }
 
+    /**
+     * Creates the table for the given {@link AmazonDynamoDB}.
+     *
+     * @param amazonDynamoDB the {@link AmazonDynamoDB} instance
+     * @return the {@link CreateTableResult} from the create request
+     * @since 0.1
+     */
     public CreateTableResult create(AmazonDynamoDB amazonDynamoDB)
     {
         CreateTableRequest createTableRequest = buildCreateTableRequest();
