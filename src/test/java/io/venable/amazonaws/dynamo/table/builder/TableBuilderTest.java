@@ -17,27 +17,43 @@
 package io.venable.amazonaws.dynamo.table.builder;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
 import io.venable.amazonaws.dynamo.table.MissingProvisionedThroughputException;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+@RunWith(Parameterized.class)
 public class TableBuilderTest
 {
+    private final CreateTableVariationFactory createTableVariationFactory;
     private Random random;
     private String tableName;
     private String hashKeyName;
     private String rangeKeyName;
+    private CreateTableVariation createTableVariation;
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+                {new AmazonDynamoDbCreateTableVariationFactory()},
+                {new DynamoDbCreateTableVariationFactory()}
+        });
+    }
+
+    public TableBuilderTest(CreateTableVariationFactory createTableVariationFactory) {
+        this.createTableVariationFactory = createTableVariationFactory;
+    }
 
     @Before
     public void setUp()
@@ -47,6 +63,8 @@ public class TableBuilderTest
 
         hashKeyName = UUID.randomUUID().toString();
         rangeKeyName = UUID.randomUUID().toString();
+
+        createTableVariation = createTableVariationFactory.newCreateTableVariation();
     }
 
     private TableBuilder createObjectUnderTest()
@@ -82,52 +100,46 @@ public class TableBuilderTest
     @Test(expected = MissingProvisionedThroughputException.class)
     public void create_without_read_or_write_capacity_throws_MissingProvisionedThroughputException()
     {
-        AmazonDynamoDB amazonDynamoDB = mock(AmazonDynamoDB.class);
+        TableBuilder objectUnderTest = createHashOnlyObjectUnderTest();
 
-        createHashOnlyObjectUnderTest()
-                .create(amazonDynamoDB);
+        createTableVariation.createTable(objectUnderTest);
     }
 
     @Test(expected = MissingProvisionedThroughputException.class)
     public void create_without_read_capacity_throws_MissingProvisionedThroughputException()
     {
-        AmazonDynamoDB amazonDynamoDB = mock(AmazonDynamoDB.class);
-
-        createHashOnlyObjectUnderTest()
+        TableBuilder objectUnderTest = createHashOnlyObjectUnderTest()
                 .primary()
                     .writeCapacity(1)
-                .and()
-                .create(amazonDynamoDB);
+                .and();
+        createTableVariation.createTable(objectUnderTest);
     }
 
     @Test(expected = MissingProvisionedThroughputException.class)
     public void create_without_write_capacity_throws_MissingProvisionedThroughputException()
     {
-        AmazonDynamoDB amazonDynamoDB = mock(AmazonDynamoDB.class);
-
-        createHashOnlyObjectUnderTest()
+        TableBuilder objectUnderTest = createHashOnlyObjectUnderTest()
                 .primary()
                     .readCapacity(1)
-                .and()
-                .create(amazonDynamoDB);
+                .and();
+        createTableVariation.createTable(objectUnderTest);
     }
 
     @Test
     public void create_without_global_secondary_indexes_should_not_set_an_empty_list()
     {
-        AmazonDynamoDB amazonDynamoDB = mock(AmazonDynamoDB.class);
-
-        createHashOnlyObjectUnderTest()
+        TableBuilder objectUnderTest = createHashOnlyObjectUnderTest()
                 .primary()
                     .readCapacity(1)
                     .writeCapacity(1)
-                .and()
-                .create(amazonDynamoDB);
+                .and();
+
+        createTableVariation.createTable(objectUnderTest);
 
         ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
                 ArgumentCaptor.forClass(CreateTableRequest.class);
 
-        verify(amazonDynamoDB).createTable(createTableRequestArgumentCaptor.capture());
+        createTableVariation.verifyCreateTable(createTableRequestArgumentCaptor);
 
         CreateTableRequest createTableRequest = createTableRequestArgumentCaptor.getValue();
 
@@ -142,13 +154,11 @@ public class TableBuilderTest
         String globalIndex1HashKey = UUID.randomUUID().toString();
         String globalIndex1RangeKey = UUID.randomUUID().toString();
 
-        AmazonDynamoDB amazonDynamoDB = mock(AmazonDynamoDB.class);
-
         Integer readCapacity = random.nextInt(50) + 50;
         Integer writeCapacity = readCapacity - random.nextInt(10);
 
         // @formatter:off
-        createObjectUnderTest()
+        TableBuilder objectUnderTest = createObjectUnderTest()
                 .name(tableName)
                 .primary()
                     .hash()
@@ -167,14 +177,15 @@ public class TableBuilderTest
                     .projection().all()
                     .readCapacity(readCapacity)
                     .writeCapacity(writeCapacity)
-                .and()
-                .create(amazonDynamoDB);
+                .and();
         // @formatter:on
+
+        createTableVariation.createTable(objectUnderTest);
 
         ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
                 ArgumentCaptor.forClass(CreateTableRequest.class);
 
-        verify(amazonDynamoDB).createTable(createTableRequestArgumentCaptor.capture());
+        createTableVariation.verifyCreateTable(createTableRequestArgumentCaptor);
 
         CreateTableRequest createTableRequest = createTableRequestArgumentCaptor.getValue();
 
@@ -199,5 +210,61 @@ public class TableBuilderTest
         assertThat(provisionedThroughput, notNullValue());
         assertThat(provisionedThroughput.getReadCapacityUnits(), is((long) readCapacity));
         assertThat(provisionedThroughput.getWriteCapacityUnits(), is((long)writeCapacity));
+    }
+
+    private interface CreateTableVariation
+    {
+        void createTable(TableBuilder tableBuilder);
+
+        void verifyCreateTable(ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor);
+    }
+
+    private interface CreateTableVariationFactory
+    {
+        CreateTableVariation newCreateTableVariation();
+    }
+
+    private static class AmazonDynamoDbCreateTableVariationFactory implements CreateTableVariationFactory
+    {
+        @Override
+        public CreateTableVariation newCreateTableVariation() {
+            return new AmazonDynamoDbCreateTableVariation();
+        }
+
+        private static class AmazonDynamoDbCreateTableVariation implements CreateTableVariation {
+            private final AmazonDynamoDB amazonDynamoDB = mock(AmazonDynamoDB.class);
+
+            @Override
+            public void createTable(TableBuilder tableBuilder) {
+                tableBuilder.create(amazonDynamoDB);
+            }
+
+            @Override
+            public void verifyCreateTable(ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor) {
+                verify(amazonDynamoDB).createTable(createTableRequestArgumentCaptor.capture());
+            }
+        }
+    }
+
+    private static class DynamoDbCreateTableVariationFactory implements CreateTableVariationFactory
+    {
+        @Override
+        public CreateTableVariation newCreateTableVariation() {
+            return new DynamoDbCreateTableVariation();
+        }
+
+        private static class DynamoDbCreateTableVariation implements CreateTableVariation {
+            private final DynamoDB dynamoDB = mock(DynamoDB.class);
+
+            @Override
+            public void createTable(TableBuilder tableBuilder) {
+                tableBuilder.create(dynamoDB);
+            }
+
+            @Override
+            public void verifyCreateTable(ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor) {
+                verify(dynamoDB).createTable(createTableRequestArgumentCaptor.capture());
+            }
+        }
     }
 }

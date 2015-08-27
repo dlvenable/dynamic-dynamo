@@ -17,6 +17,8 @@
 package io.venable.amazonaws.dynamo.table.builder;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.*;
 
 import java.util.ArrayList;
@@ -112,6 +114,19 @@ public class TableBuilder
     {
         CreateTableRequest createTableRequest = buildCreateTableRequest();
         return amazonDynamoDB.createTable(createTableRequest);
+    }
+
+    /**
+     * Creates the table for the given {@link DynamoDB}.
+     *
+     * @param dynamoDB the {@link DynamoDB} instance
+     * @return the {@link CreateTableResult} from the create request
+     * @since 0.2
+     */
+    public Table create(DynamoDB dynamoDB)
+    {
+        CreateTableRequest createTableRequest = buildCreateTableRequest();
+        return dynamoDB.createTable(createTableRequest);
     }
 
     private CreateTableRequest buildCreateTableRequest()
