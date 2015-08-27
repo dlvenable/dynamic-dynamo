@@ -46,5 +46,7 @@ public class TableHelper
         tableDefiner.defineTable(tableBuilder);
 
         tableBuilder.create(amazonDynamoDB);
+
+        tablesRequested.add(tableName);
     }
 }
