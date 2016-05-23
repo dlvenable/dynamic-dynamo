@@ -16,9 +16,11 @@
 
 package io.venable.amazonaws.dynamo.table.builder;
 
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.amazonaws.services.dynamodbv2.util.Tables;
+import io.venable.amazonaws.dynamo.test.TableTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +49,8 @@ public class TableBuilderIT
     @Before
     public void setUp()
     {
-        amazonDynamoDB = new AmazonDynamoDBClient();
+        StaticCredentialsProvider credentialsProvider = new StaticCredentialsProvider(new BasicAWSCredentials("", ""));
+        amazonDynamoDB = new AmazonDynamoDBClient(credentialsProvider);
         amazonDynamoDB.setEndpoint("http://localhost:8000");
 
         tableName = UUID.randomUUID().toString();
@@ -58,7 +61,7 @@ public class TableBuilderIT
         hashKeyValue = UUID.randomUUID().toString();
         rangeKeyValue = UUID.randomUUID().toString();
 
-        if(Tables.doesTableExist(amazonDynamoDB, tableName))
+        if(TableTestUtils.doesTableExist(amazonDynamoDB, tableName))
             amazonDynamoDB.deleteTable(tableName);
 
         item = new HashMap<>();
@@ -72,7 +75,7 @@ public class TableBuilderIT
     @After
     public void tearDown()
     {
-        if(Tables.doesTableExist(amazonDynamoDB, tableName))
+        if(TableTestUtils.doesTableExist(amazonDynamoDB, tableName))
             amazonDynamoDB.deleteTable(tableName);
     }
 

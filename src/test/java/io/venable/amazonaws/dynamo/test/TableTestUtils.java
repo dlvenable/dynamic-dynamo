@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 David Venable.
+ * Copyright (c) 2016 David Venable.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -14,46 +14,20 @@
  * the License.
  */
 
-package io.venable.amazonaws.dynamo.table;
+package io.venable.amazonaws.dynamo.test;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.TableStatus;
-import io.venable.amazonaws.dynamo.table.builder.TableBuilder;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * @author David Venable
  */
-public class TableHelper
+public class TableTestUtils
 {
-    private static final Set<String> tablesRequested = Collections.synchronizedSet(new HashSet<String>());
-
-    public static void createTableIfNecessary(AmazonDynamoDB amazonDynamoDB, String tableName, TableDefiner tableDefiner)
-    {
-        if(tablesRequested.contains(tableName))
-            return;
-
-        if(doesTableExist(amazonDynamoDB, tableName))
-        {
-            tablesRequested.add(tableName);
-            return;
-        }
-
-        TableBuilder tableBuilder = new TableBuilder().name(tableName);
-        tableDefiner.defineTable(tableBuilder);
-
-        tableBuilder.create(amazonDynamoDB);
-
-        tablesRequested.add(tableName);
-    }
-
-    private static boolean doesTableExist(AmazonDynamoDB dynamo, String tableName) {
+    public static boolean doesTableExist(AmazonDynamoDB dynamo, String tableName) {
         try {
             TableDescription table = dynamo.describeTable(new DescribeTableRequest(tableName)).getTable();
             return TableStatus.ACTIVE.toString().equals(table.getTableStatus());
