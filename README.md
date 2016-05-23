@@ -54,6 +54,6 @@ repositories {
 }
 
 dependencies {
-    compile("io.venable.amazonaws:dynamic-dynamo:0.1")
+    compile("io.venable.amazonaws:dynamic-dynamo:0.3")
 }
 ```
