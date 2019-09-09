@@ -1,6 +1,8 @@
 # Dynamic Dynamo
 Provides higher-level abstractions for DynamoDB using the Amazon AWS Java SDK
 
+**Deprecated**: The AWS Java SDK has much better APIs now. And using CloudFormation to create DynamoDB tables is much better.
+
 ## Building Tables
 
 One of the primary features of this project is a fluent syntax for creating DynamoDB tables.
